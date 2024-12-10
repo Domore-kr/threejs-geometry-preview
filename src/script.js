@@ -1,24 +1,73 @@
 import * as THREE from 'three';
-
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import init from './init';
 
 import './style.css';
 
 const { sizes, camera, scene, canvas, controls, renderer } = init();
 
-camera.position.z = 3;
+camera.position.set(0, 2, 5);
 
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshBasicMaterial({
-	color: 'gray',
-	wireframe: true,
+const floor = new THREE.Mesh(
+	new THREE.PlaneGeometry(10, 10),
+	new THREE.MeshStandardMaterial({
+		color: '#444444',
+		metalness: 0,
+		roughness: 0.5,
+	}),
+);
+floor.receiveShadow = true;
+floor.rotation.x = -Math.PI * 0.5;
+scene.add(floor);
+
+const hemlight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.61);
+hemlight.position.set(0, 50, 0);
+scene.add(hemlight);
+
+const dirlight = new THREE.DirectionalLight(0xffffff, 0.54);
+dirlight.position.set(-8, 12, 8);
+dirlight.castShadow = true;
+dirlight.shadow.mapSize = new THREE.Vector2(1024, 1024);
+scene.add(dirlight);
+
+const loader = new GLTFLoader();
+//loader.load(
+//	'/models/Avocado/Avocado.gltf',
+//	(gltf) => {
+//		console.log('success');
+//		console.log(gltf);
+//		scene.add(gltf.scene);
+//	},
+//	(progress) => {
+//		//console.log('progress');
+//		//console.log(progress);
+//	},
+//	(error) => {
+//		//console.log('error');
+//		//console.log(error);
+//	},
+//);
+
+let mixer = null;
+
+loader.load('/models/BrainStem/BrainStem.gltf', (gltf) => {
+	mixer = new THREE.AnimationMixer(gltf.scene);
+	const action = mixer.clipAction(gltf.animations[0]);
+	action.play();
+	scene.add(gltf.scene);
 });
-const mesh = new THREE.Mesh(geometry, material);
-scene.add(mesh);
+
+const clock = new THREE.Clock();
 
 const tick = () => {
 	controls.update();
 	renderer.render(scene, camera);
+
+	const delta = clock.getDelta();
+	if (mixer) {
+		mixer.update(delta);
+	}
+
 	window.requestAnimationFrame(tick);
 };
 tick();
